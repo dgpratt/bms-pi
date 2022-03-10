@@ -1,13 +1,12 @@
 module Main where
 
--- import Main.Utf8 (withUtf8)
-import Pi (piDigits, piDigits2)
+import Pi (piDigits, piDigitsAtan, piDigitsAsin)
+import System.Environment (getArgs)
 
--- main :: IO ()
--- main = do
---   -- For withUtf8, see https://serokell.io/blog/haskell-with-utf8
---   withUtf8 $ do
---     putStrLn "Hello 🌎"
---     putStrLn (piDigits 1000)
+main :: IO ()
+main = getArgs >>= run
 
-main = putStrLn (piDigits2 1000)
+run :: [String] -> IO ()
+run ("-v":"atan":_) = putStrLn (piDigitsAtan 1000)
+run ("-v":"asin":_) = putStrLn (piDigitsAsin 1000)
+run _            = putStrLn (piDigits 1000)

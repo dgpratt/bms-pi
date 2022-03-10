@@ -1,8 +1,9 @@
-module Pi (piDigits, piDigits2) where
+module Pi (piDigits, piDigitsAtan, piDigitsAsin) where
 
 import Data.Number.CReal (CReal, showCReal)
 import Prelude hiding (pi)
 import qualified Prelude (pi)
+import Data.Ratio ((%))
 
 nms :: [Integer]
 nms = scanl (\a n -> 2 * a * n) 3 [1, 3..]
@@ -14,15 +15,22 @@ dns = zipWith (*) [1, 3 ..] xs
 
 terms :: [CReal]
 terms = zipWith f nms dns
-  where f n d = fromIntegral n / fromIntegral d
+  where f n d = fromRational (n % d)
 
-pi :: Int -> CReal
-pi d = sum (take 1655 terms)
-  -- where
-  --   limit = 10 ** fromIntegral (-d)
+pi :: CReal
+pi = sum (take 1655 terms)
+
+piAtan :: CReal
+piAtan = Prelude.pi
+
+piAsin :: CReal 
+piAsin = 6 * asin (fromRational (1 % 2))
 
 piDigits :: Int -> String
-piDigits n = showCReal n (pi n)
+piDigits n = showCReal n pi
 
-piDigits2 :: Int -> String
-piDigits2 n = showCReal n Prelude.pi
+piDigitsAtan :: Int -> String
+piDigitsAtan n = showCReal n piAtan
+
+piDigitsAsin :: Int -> String
+piDigitsAsin n = showCReal n piAsin
