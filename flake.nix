@@ -1,52 +1,42 @@
 {
-  description = "bms-pi's description";
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/b66b39216b1fef2d8c33cc7a5c72d8da80b79970";
-    flake-utils.url = "github:numtide/flake-utils";
-    flake-utils.inputs.nixpkgs.follows = "nixpkgs";
-    flake-compat.url = "github:edolstra/flake-compat";
-    flake-compat.flake = false;
-    flake-compat.inputs.nixpkgs.follows = "nixpkgs";
+  # inspired by: https://serokell.io/blog/practical-nix-flakes#packaging-existing-applications
+  description = "Calculating pi in Haskell (badly)";
+  inputs.nixpkgs.url = "nixpkgs";
+  inputs.flake-compat = {
+    url = github:edolstra/flake-compat;
+    flake = false;
   };
-  outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        overlays = [ ];
-        pkgs =
-          import nixpkgs { inherit system overlays; config.allowBroken = true; };
-        # Change GHC version here. To get the appropriate value, run:
-        #   nix-env -f "<nixpkgs>" -qaP -A haskell.compiler
-        hp = pkgs.haskellPackages; # pkgs.haskell.packages.ghc921;
-        project = returnShellEnv:
-          hp.developPackage {
-            inherit returnShellEnv;
-            name = "bms-pi";
-            root = ./.;
-            withHoogle = false;
-            overrides = self: super: with pkgs.haskell.lib; {
-              # Use callCabal2nix to override Haskell dependencies here
-              # cf. https://tek.brick.do/K3VXJd8mEKO7
-              # Example: 
-              # > NanoID = self.callCabal2nix "NanoID" inputs.NanoID { };
-              # Assumes that you have the 'NanoID' flake input defined.
-            };
-            modifier = drv:
-              pkgs.haskell.lib.addBuildTools drv (with hp; [
-                # Specify your build/dev dependencies here. 
-                cabal-fmt
-                cabal-install
-                ghcid
-                haskell-language-server
-                ormolu
-                pkgs.nixpkgs-fmt
-              ]);
-          };
-      in
-      {
-        # Used by `nix build` & `nix run` (prod exe)
-        defaultPackage = project false;
-
-        # Used by `nix develop` (dev shell)
-        devShell = project true;
+  outputs = { self, nixpkgs, flake-compat }:
+    let
+      supportedSystems = [ "x86_64-linux" ];
+      forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
+      nixpkgsFor = forAllSystems (system: import nixpkgs {
+        inherit system;
+        overlays = [ self.overlay ];
       });
+    in
+    {
+      overlay = (final: prev: {
+        hm-infer = final.haskellPackages.callCabal2nix "bms-pi" ./. { };
+      });
+      packages = forAllSystems (system: {
+        hm-infer = nixpkgsFor.${system}.hm-infer;
+      });
+      defaultPackage = forAllSystems (system: self.packages.${system}.hm-infer);
+      checks = self.packages;
+      devShell = forAllSystems (system:
+        let haskellPackages = nixpkgsFor.${system}.haskellPackages;
+        in
+        haskellPackages.shellFor {
+          packages = p: [ self.packages.${system}.hm-infer ];
+          # withHoogle = true;
+          buildInputs = with haskellPackages; [
+            haskell-language-server
+            ghcid
+            cabal-install
+          ];
+          # Change the prompt to show that you are in a devShell
+          shellHook = "export PS1='\\e[1;34mdev > \\e[0m'";
+        });
+    };
 }
