@@ -22,28 +22,8 @@ extra-source-files:
 
 executable bms-pi
   build-depends:
-    , aeson
-    , async
     , base          >=4.13.0.0 && <=4.18.0.0
-    , bytestring
-    , containers
-    , data-default
-    , directory
-    , filepath
-    , lens
-    , mtl
     , numbers
-    , profunctors
-    , relude
-    , shower
-    , text
-    , time
-    , with-utf8
-
-  mixins:
-    base hiding (Prelude),
-    relude (Relude as Prelude, Relude.Container.One),
-    relude
 
   ghc-options:
     -Wall -Wincomplete-record-updates -Wincomplete-uni-patterns
